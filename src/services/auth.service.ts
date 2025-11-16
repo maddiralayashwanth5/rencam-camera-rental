@@ -153,11 +153,26 @@ class AuthService {
     
     for (const storedUser of users) {
       if (storedUser.email.toLowerCase() === credentials.email.toLowerCase()) {
-        // Verify password
-        const isValid = await bcrypt.compare(credentials.password, storedUser.passwordHash);
+        // For demo mode, check if passwordHash exists, otherwise use plain text comparison
+        let isValid = false;
+        
+        if (storedUser.passwordHash) {
+          try {
+            // Verify password with bcrypt
+            isValid = await bcrypt.compare(credentials.password, storedUser.passwordHash);
+          } catch (error) {
+            logger.warn(LogCategory.AUTH, 'Bcrypt comparison failed, falling back to plain text', { error });
+            // Fallback to plain text for demo
+            isValid = credentials.password === storedUser.password;
+          }
+        } else if (storedUser.password) {
+          // Plain text comparison for demo mode
+          isValid = credentials.password === storedUser.password;
+        }
+        
         if (isValid) {
           // Remove password hash before returning
-          const { passwordHash, ...user } = storedUser;
+          const { passwordHash, password, ...user } = storedUser;
           return user as User;
         }
       }
@@ -187,9 +202,8 @@ class AuthService {
    * Get default demo users
    */
   private getDefaultUsers(): any[] {
-    // Default passwords are hashed versions of "password123"
-    const defaultPasswordHash = '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYzpLHJ7.Oi';
-    
+    // For demo mode, use plain text passwords
+    // In production, these would be properly hashed
     return [
       {
         id: 'user-renter-1',
@@ -197,7 +211,7 @@ class AuthService {
         name: 'Ravi Kumar',
         role: 'renter',
         phone: '+91 98765 43210',
-        passwordHash: defaultPasswordHash,
+        password: 'password123', // Plain text for demo
         createdAt: new Date().toISOString(),
         isActive: true
       },
@@ -207,7 +221,7 @@ class AuthService {
         name: 'Priya Sharma',
         role: 'lender',
         phone: '+91 98765 43211',
-        passwordHash: defaultPasswordHash,
+        password: 'password123', // Plain text for demo
         createdAt: new Date().toISOString(),
         isActive: true
       },
@@ -217,7 +231,7 @@ class AuthService {
         name: 'Admin User',
         role: 'admin',
         phone: '+91 98765 43212',
-        passwordHash: defaultPasswordHash,
+        password: 'password123', // Plain text for demo
         createdAt: new Date().toISOString(),
         isActive: true
       }
